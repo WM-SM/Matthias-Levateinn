@@ -245,8 +245,8 @@ const flashDiv = document.getElementById('flash-overlay');
 const comboUI = document.getElementById('current-combo-ui');
 const faceImgUI = document.getElementById('face-img');
 
-// 시간 관리용 변수 (60FPS 기준 델타 타임)
-let lastTime = 0;
+// 시간 관리용 변수
+let lastTime = performance.now();
 let deltaTime = 1;
 
 const sounds = {
@@ -351,7 +351,6 @@ class Fruit {
         }
     }
     update(dt) { 
-        // deltaTime 적용
         this.vy += 0.4 * dt; 
         this.x += this.vx * dt; 
         this.y += this.vy * dt; 
@@ -485,8 +484,14 @@ function showTutorial() {
 
 function getCoord(e) {
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
     return {
         x: clientX - rect.left,
         y: clientY - rect.top
@@ -495,6 +500,10 @@ function getCoord(e) {
 
 function inputStart(e) {
     if (gameState !== 'PLAYING') return;
+    // 터치와 마우스 중복 이벤트 방지
+    if (e.cancelable) e.preventDefault();
+    e.stopPropagation();
+
     isDragging = true; 
     strokeCount = 0; 
     strokeStartTime = Date.now(); 
@@ -506,6 +515,7 @@ function inputStart(e) {
 function inputMove(e) {
     if (!isDragging || gameState !== 'PLAYING') return;
     if (e.cancelable) e.preventDefault();
+    e.stopPropagation();
     
     const pos = getCoord(e);
     const curr = { x: pos.x, y: pos.y };
@@ -551,7 +561,8 @@ function inputMove(e) {
     trails.push(curr); if (trails.length > 10) trails.shift();
 }
 
-function inputEnd() {
+function inputEnd(e) {
+    if (e.cancelable) e.preventDefault();
     if (isDragging) {
         if (strokeCount >= 3 && (Date.now() - strokeStartTime <= 1000)) {
             totalComboCount++; bestCombo = Math.max(bestCombo, totalComboCount);
@@ -564,29 +575,32 @@ function inputEnd() {
     isDragging = false;
 }
 
+// 이벤트 리스너: 모바일 중복 방지 및 캡쳐 강화
 canvas.addEventListener('mousedown', inputStart);
 window.addEventListener('mousemove', inputMove, { passive: false });
 window.addEventListener('mouseup', inputEnd);
 
-canvas.addEventListener('touchstart', (e) => { inputStart(e); }, { passive: false });
-canvas.addEventListener('touchmove', (e) => { inputMove(e); }, { passive: false });
+canvas.addEventListener('touchstart', inputStart, { passive: false });
+canvas.addEventListener('touchmove', inputMove, { passive: false });
 canvas.addEventListener('touchend', inputEnd, { passive: false });
 
 function animate(currentTime) {
     // 델타 타임 계산 (60FPS 기준 16.67ms = deltaTime 1)
-    if (!lastTime) lastTime = currentTime;
     const elapsed = currentTime - lastTime;
     lastTime = currentTime;
-    deltaTime = elapsed / (1000 / 60);
-
-    // 델타 타임이 너무 튀는 현상 방지 (백그라운드 복귀 등)
-    if (deltaTime > 3) deltaTime = 1;
+    
+    // 비정상적인 프레임 건너뜀 방지 (터치 가속의 주요 원인 해결)
+    // 16.67ms에 가까울수록 1에 수렴하게 보정
+    deltaTime = Math.min(elapsed / (1000 / 60), 2.5);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     if (gameState === 'PLAYING') {
         if (feverPoints >= 100 && !isFever) { isFever = true; timeLeft += 5; }
-        if (isFever) { feverPoints -= 0.17 * deltaTime; if (feverPoints <= 0) { isFever = false; feverPoints = 0; } }
+        if (isFever) { 
+            feverPoints -= 0.17 * deltaTime; 
+            if (feverPoints <= 0) { isFever = false; feverPoints = 0; } 
+        }
         document.getElementById('fever-bar').style.width = feverPoints + "%";
         comboUI.innerText = totalComboCount; 
 
@@ -635,8 +649,10 @@ document.getElementById('main-btn').addEventListener('click', () => {
     fruits = []; slicedFruits = []; spearAttacks = []; updateHearts();
     document.getElementById('overlay').style.display = 'none'; 
     document.getElementById('game-ui').style.display = 'block'; 
+    lastTime = performance.now(); // 시작 시간 초기화
     spawnCycle();
 });
+
 document.getElementById('retry-btn').addEventListener('click', () => { stopBGM(); location.reload(); });
 setInterval(() => { if (gameState === 'PLAYING') { timeLeft--; if (timeLeft <= 0) gameOver(); } }, 1000);
 
