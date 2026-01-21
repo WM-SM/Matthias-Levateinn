@@ -13,9 +13,14 @@
             overflow: hidden; 
             font-family: 'Arial', sans-serif; 
             user-select: none; 
-            touch-action: none; /* 브라우저 기본 터치 동작(스크롤 등) 방지 */
+            touch-action: none; /* 전체 스크롤 방지 */
         }
-        canvas { display: block; background: rgba(26, 26, 26, 0.4); cursor: crosshair; }
+        canvas { 
+            display: block; 
+            background: rgba(26, 26, 26, 0.4); 
+            cursor: crosshair;
+            touch-action: none; /* 캔버스 위 터치 동작 강제 점유 */
+        }
         
         #overlay, #result-screen { 
             position: absolute; 
@@ -132,7 +137,6 @@
             color: rgba(255, 255, 255, 0.5);
         }
 
-        /* Desktop specific sizing adjustments */
         @media (min-width: 768px) {
             #game-title, .result-title { font-size: 60px; }
             #description { font-size: 28px; }
@@ -281,7 +285,10 @@ function playSound(name) {
 function stopBGM() { sounds.bgm.pause(); sounds.bgm.currentTime = 0; }
 function startBGM() { sounds.bgm.volume = bgmVolume; sounds.bgm.play().catch(e => console.log("BGM play failed", e)); }
 
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+function resize() { 
+    canvas.width = window.innerWidth; 
+    canvas.height = window.innerHeight; 
+}
 window.addEventListener('resize', resize);
 resize();
 
@@ -461,22 +468,46 @@ function showTutorial() {
     document.body.appendChild(box);
 }
 
-// 공통 입력 시작 처리 (마우스 & 터치)
-function inputStart(x, y) {
-    if (gameState !== 'PLAYING') return;
-    isDragging = true; strokeCount = 0; strokeStartTime = Date.now(); lastAngle = null; trails = [{ x, y }];
+// 좌표 획득 함수 (캔버스 상대 좌표)
+function getCoord(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+    };
 }
 
-// 공통 입력 이동 처리 (마우스 & 터치)
-function inputMove(x, y) {
+// 입력 시작
+function inputStart(e) {
+    if (gameState !== 'PLAYING') return;
+    isDragging = true; 
+    strokeCount = 0; 
+    strokeStartTime = Date.now(); 
+    lastAngle = null; 
+    const pos = getCoord(e);
+    trails = [{ x: pos.x, y: pos.y }];
+}
+
+// 입력 이동
+function inputMove(e) {
     if (!isDragging || gameState !== 'PLAYING') return;
-    const curr = { x, y }; const last = trails[trails.length - 1];
+    
+    // 모바일 기본 동작 방지
+    if (e.cancelable) e.preventDefault();
+    
+    const pos = getCoord(e);
+    const curr = { x: pos.x, y: pos.y };
+    const last = trails[trails.length - 1];
+    
     const angle = Math.atan2(curr.y - last.y, curr.x - last.x);
     if (lastAngle !== null) {
         let diff = Math.abs(angle - lastAngle); if (diff > Math.PI) diff = Math.PI * 2 - diff;
         if (diff > Math.PI / 2) { if (strokeCount > 0) totalComboCount = 0; strokeCount = 0; strokeStartTime = Date.now(); }
     }
     lastAngle = angle;
+
     for (let i = fruits.length - 1; i >= 0; i--) {
         const f = fruits[i];
         if (Math.hypot(f.x - curr.x, f.y - curr.y) < f.size * 0.8) {
@@ -510,7 +541,7 @@ function inputMove(x, y) {
     trails.push(curr); if (trails.length > 10) trails.shift();
 }
 
-// 공통 입력 종료 처리 (마우스 & 터치)
+// 입력 종료
 function inputEnd() {
     if (isDragging) {
         if (strokeCount >= 3 && (Date.now() - strokeStartTime <= 1000)) {
@@ -524,28 +555,20 @@ function inputEnd() {
     isDragging = false;
 }
 
-// 마우스 이벤트
-canvas.addEventListener('mousedown', (e) => inputStart(e.clientX, e.clientY));
-canvas.addEventListener('mousemove', (e) => inputMove(e.clientX, e.clientY));
+// 이벤트 리스너 (캔버스에 직접 등록하여 우선순위 확보)
+canvas.addEventListener('mousedown', inputStart);
+window.addEventListener('mousemove', inputMove, { passive: false });
 window.addEventListener('mouseup', inputEnd);
 
-// 터치 이벤트
 canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    inputStart(touch.clientX, touch.clientY);
-}, {passive: false});
+    inputStart(e);
+}, { passive: false });
 
 canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    inputMove(touch.clientX, touch.clientY);
-}, {passive: false});
+    inputMove(e);
+}, { passive: false });
 
-canvas.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    inputEnd();
-}, {passive: false});
+canvas.addEventListener('touchend', inputEnd, { passive: false });
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -577,8 +600,14 @@ function animate() {
         }
     }
     if (isDragging && trails.length > 1) {
-        ctx.beginPath(); ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = (window.innerWidth < 768) ? 6 : 12; ctx.lineCap = "round";
-        ctx.moveTo(trails[0].x, trails[0].y); for (let i = 1; i < trails.length; i++) ctx.lineTo(trails[i].x, trails[i].y); ctx.stroke();
+        ctx.beginPath(); 
+        ctx.strokeStyle = "rgba(255,255,255,0.9)"; 
+        ctx.lineWidth = (window.innerWidth < 768) ? 8 : 12; 
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.moveTo(trails[0].x, trails[0].y); 
+        for (let i = 1; i < trails.length; i++) ctx.lineTo(trails[i].x, trails[i].y); 
+        ctx.stroke();
     }
     document.getElementById('score').innerText = Math.floor(score); 
     document.getElementById('timer').innerText = Math.ceil(timeLeft);
