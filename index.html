@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>마티아스: 레바테인</title>
     <style>
         body { 
@@ -12,6 +13,7 @@
             overflow: hidden; 
             font-family: 'Arial', sans-serif; 
             user-select: none; 
+            touch-action: none; /* 브라우저 기본 터치 동작(스크롤 등) 방지 */
         }
         canvas { display: block; background: rgba(26, 26, 26, 0.4); cursor: crosshair; }
         
@@ -28,26 +30,26 @@
             align-items: center; 
             z-index: 100; 
             box-sizing: border-box; 
-            padding: 40px; 
+            padding: 20px; 
         }
         #result-screen { display: none; }
         
-        /* 제목 30px 위로 조정 */
         #game-title, .result-title { 
-            font-size: 60px; 
+            font-size: 8vw; 
+            max-size: 60px;
             font-weight: bold; 
             color: #bc00ff; 
             text-shadow: 0 0 20px rgba(188, 0, 255, 0.6); 
-            margin-bottom: 40px; 
-            margin-top: -30px; 
+            margin-bottom: 20px; 
+            text-align: center;
         }
         
         #grid-container { 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
             grid-template-rows: auto auto;    
-            gap: 30px 80px; 
-            width: 90%; 
+            gap: 20px; 
+            width: 95%; 
             max-width: 1400px;
             align-items: center;
         }
@@ -55,8 +57,8 @@
         #description { 
             grid-column: 1; 
             grid-row: 1;
-            font-size: 28px; 
-            line-height: 1.8; 
+            font-size: 18px; 
+            line-height: 1.6; 
             text-align: left; 
             color: #fff; 
             text-shadow: 2px 2px 4px #000;
@@ -70,66 +72,82 @@
             justify-content: center;
             align-items: center;
         }
-        #char-img { max-width: 100%; max-height: 600px; object-fit: contain; }
+        #char-img { max-width: 100%; max-height: 40vh; object-fit: contain; }
         
         .btn-wrapper-left { grid-column: 1; grid-row: 2; display: flex; justify-content: center; }
         .btn-wrapper-right { grid-column: 2; grid-row: 2; display: flex; justify-content: center; }
 
-        .btn { padding: 20px 60px; font-size: 32px; font-weight: bold; color: white; background: #e67e22; border: none; border-radius: 12px; cursor: pointer; pointer-events: auto; height: 80px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; min-width: 250px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .btn { padding: 15px 30px; font-size: 24px; font-weight: bold; color: white; background: #e67e22; border: none; border-radius: 12px; cursor: pointer; pointer-events: auto; display: flex; align-items: center; justify-content: center; transition: background 0.2s; min-width: 150px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .btn:hover { background: #d35400; }
 
-        /* 하단 저작권 문구 스타일 */
         #copyright-notice {
             position: absolute;
-            bottom: 20px;
-            width: 80%;
+            bottom: 10px;
+            width: 90%;
             text-align: center;
-            font-size: 14px;
+            font-size: 10px;
             color: rgba(255, 255, 255, 0.6);
-            line-height: 1.5;
+            line-height: 1.3;
             pointer-events: none;
         }
 
         #game-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
         
-        #ui-left-top { position: absolute; top: 30px; left: 30px; display: flex; flex-direction: column; gap: 10px; }
-        #timer { font-size: 52px; color: #ffeb3b; font-weight: bold; text-shadow: 2px 2px 4px #000; }
-        .score-box { font-size: 31.2px; font-weight: bold; text-shadow: 2px 2px 4px #000; }
-        .combo-box { font-size: 31.2px; color: #bc00ff; font-weight: bold; margin-top: 5px; text-shadow: 2px 2px 4px #000; }
+        #ui-left-top { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 5px; }
+        #timer { font-size: 32px; color: #ffeb3b; font-weight: bold; text-shadow: 2px 2px 4px #000; }
+        .score-box { font-size: 20px; font-weight: bold; text-shadow: 2px 2px 4px #000; }
+        .combo-box { font-size: 20px; color: #bc00ff; font-weight: bold; text-shadow: 2px 2px 4px #000; }
         
-        #ui-right-top-container { position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 15px; pointer-events: auto; }
-        #ui-face-box { width: 234px; height: 234px; border: 3px solid #bc00ff; border-radius: 15px; background: rgba(0,0,0,0.7); overflow: hidden; }
+        #ui-right-top-container { position: absolute; top: 15px; right: 15px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: auto; }
+        #ui-face-box { width: 100px; height: 100px; border: 2px solid #bc00ff; border-radius: 10px; background: rgba(0,0,0,0.7); overflow: hidden; }
         #face-img { width: 100%; height: 100%; object-fit: cover; }
         
-        .volume-controls { background: rgba(0, 0, 0, 0.8); border: 1px solid #bc00ff; border-radius: 10px; padding: 10px; width: 234px; box-sizing: border-box; }
-        .volume-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
-        .volume-label { font-size: 14px; color: #bc00ff; font-weight: bold; display: flex; justify-content: space-between; }
+        .volume-controls { background: rgba(0, 0, 0, 0.8); border: 1px solid #bc00ff; border-radius: 8px; padding: 8px; width: 120px; box-sizing: border-box; }
+        .volume-row { display: flex; flex-direction: column; gap: 2px; margin-bottom: 5px; }
+        .volume-label { font-size: 10px; color: #bc00ff; font-weight: bold; display: flex; justify-content: space-between; }
         .volume-slider { width: 100%; cursor: pointer; accent-color: #bc00ff; }
 
-        #ui-left-bottom { position: absolute; bottom: 30px; left: 30px; display: flex; gap: 20px; }
-        .heart { width: 150px; height: 150px; object-fit: contain; }
+        #ui-left-bottom { position: absolute; bottom: 15px; left: 15px; display: flex; gap: 5px; }
+        .heart { width: 40px; height: 40px; object-fit: contain; }
         .heart-lost { opacity: 0.1; filter: grayscale(1); }
         
-        #giveup-container { position: absolute; bottom: 30px; right: 30px; pointer-events: auto; }
-        #giveup-btn { background: #c0392b; padding: 15px 40px; font-size: 24px; }
+        #giveup-container { position: absolute; bottom: 15px; right: 15px; pointer-events: auto; }
+        #giveup-btn { background: #c0392b; padding: 10px 20px; font-size: 16px; min-width: 80px; }
 
-        .gauge-container { width: 325px; height: 20px; background: #333; border-radius: 10px; overflow: hidden; margin-top: 13px; border: 2.6px solid #555; }
+        .gauge-container { width: 150px; height: 10px; background: #333; border-radius: 5px; overflow: hidden; margin-top: 5px; border: 1.5px solid #555; }
         #fever-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #ff9800, #ffeb3b); }
-        #combo-display { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); font-size: 90px; font-weight: bold; color: #ffeb3b; display: none; z-index: 50; text-shadow: 4px 4px 8px #000; }
+        #combo-display { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; font-weight: bold; color: #ffeb3b; display: none; z-index: 50; text-shadow: 4px 4px 8px #000; }
         
         #flash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; z-index: 60; transition: opacity 0.3s; }
 
-        #result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; margin-bottom: 40px; }
-        .result-info p { font-size: 50px; margin: 10px 0; text-shadow: 2px 2px 4px #000; }
-        #result-char-img { max-width: 100%; max-height: 500px; object-fit: contain; }
+        #result-grid { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: center; margin-bottom: 20px; text-align: center;}
+        .result-info p { font-size: 28px; margin: 5px 0; text-shadow: 2px 2px 4px #000; }
+        #result-char-img { max-width: 100%; max-height: 30vh; object-fit: contain; }
 
-        /* 결과 화면 제작자 문구 */
         #creator-tag {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
-            font-size: 16px;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
             color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Desktop specific sizing adjustments */
+        @media (min-width: 768px) {
+            #game-title, .result-title { font-size: 60px; }
+            #description { font-size: 28px; }
+            #char-img { max-height: 600px; }
+            .btn { padding: 20px 60px; font-size: 32px; min-width: 250px; }
+            #ui-face-box { width: 234px; height: 234px; }
+            .volume-controls { width: 234px; padding: 10px; }
+            .volume-label { font-size: 14px; }
+            #timer { font-size: 52px; }
+            .score-box, .combo-box { font-size: 31.2px; }
+            .gauge-container { width: 325px; height: 20px; }
+            .heart { width: 150px; height: 150px; }
+            #result-grid { grid-template-columns: 1fr 1fr; text-align: left; }
+            .result-info p { font-size: 50px; }
+            #combo-display { font-size: 90px; }
         }
     </style>
 </head>
@@ -306,11 +324,12 @@ function setFace(type) {
 class Fruit {
     constructor(type) {
         this.type = type;
-        this.x = Math.random() * (canvas.width - 300) + 150;
+        this.x = Math.random() * (canvas.width * 0.7) + (canvas.width * 0.15);
         this.y = canvas.height + 150;
-        this.size = (type === 'BIG') ? 220 : 150;
-        this.vx = (Math.random() - 0.5) * 14;
-        this.vy = -(20 + Math.random() * 10);
+        let baseSize = (window.innerWidth < 768) ? 60 : 150;
+        this.size = (type === 'BIG') ? baseSize * 1.5 : baseSize;
+        this.vx = (Math.random() - 0.5) * (canvas.width * 0.01);
+        this.vy = -(canvas.height * 0.02 + Math.random() * 10);
         this.rotation = 0;
         this.rotSpeed = (Math.random() - 0.5) * 0.15;
         if (type === 'NORMAL') {
@@ -351,7 +370,9 @@ class SpearProjectile {
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(Math.atan2(this.vy, this.vx) + Math.PI / 2);
-            ctx.drawImage(this.img, -100, -200, 200, 400); 
+            let sw = (window.innerWidth < 768) ? 80 : 200;
+            let sh = (window.innerWidth < 768) ? 160 : 400;
+            ctx.drawImage(this.img, -sw/2, -sh/2, sw, sh); 
             ctx.restore();
         }
     }
@@ -434,33 +455,22 @@ function showTutorial() {
         "???: 공격해 더 많은 점수 획득"
     ];
     const box = document.createElement('div');
-    box.style = "position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.95); padding:40px; border:3px solid #bc00ff; border-radius:20px; z-index:200; font-size:26px; color:white; white-space:pre-line; text-align:center; box-shadow: 0 0 30px rgba(188,0,255,0.4);";
+    box.style = "position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.95); padding:40px; border:3px solid #bc00ff; border-radius:20px; z-index:200; font-size:18px; color:white; white-space:pre-line; text-align:center; box-shadow: 0 0 30px rgba(188,0,255,0.4); width: 80%; max-width: 500px;";
     box.innerText = "게임 설명\n\n" + tutorialContent.join("\n") + "\n\n(클릭하여 닫기)";
     box.onclick = () => document.body.removeChild(box);
     document.body.appendChild(box);
 }
 
-canvas.addEventListener('mousedown', (e) => {
+// 공통 입력 시작 처리 (마우스 & 터치)
+function inputStart(x, y) {
     if (gameState !== 'PLAYING') return;
-    isDragging = true; strokeCount = 0; strokeStartTime = Date.now(); lastAngle = null; trails = [{ x: e.clientX, y: e.clientY }];
-});
+    isDragging = true; strokeCount = 0; strokeStartTime = Date.now(); lastAngle = null; trails = [{ x, y }];
+}
 
-window.addEventListener('mouseup', () => {
-    if (isDragging) {
-        if (strokeCount >= 3 && (Date.now() - strokeStartTime <= 1000)) {
-            totalComboCount++; bestCombo = Math.max(bestCombo, totalComboCount);
-            if (!isFever) feverPoints = Math.min(100, feverPoints + (strokeCount * 2));
-            playSound('combo'); setFace('HAPPY');
-            comboDiv.innerText = `${totalComboCount} COMBO!`; comboDiv.style.display = 'block';
-            setTimeout(() => { comboDiv.style.display = 'none'; }, 800);
-        } else if (strokeCount > 0) { totalComboCount = 0; }
-    }
-    isDragging = false;
-});
-
-canvas.addEventListener('mousemove', (e) => {
+// 공통 입력 이동 처리 (마우스 & 터치)
+function inputMove(x, y) {
     if (!isDragging || gameState !== 'PLAYING') return;
-    const curr = { x: e.clientX, y: e.clientY }; const last = trails[trails.length - 1];
+    const curr = { x, y }; const last = trails[trails.length - 1];
     const angle = Math.atan2(curr.y - last.y, curr.x - last.x);
     if (lastAngle !== null) {
         let diff = Math.abs(angle - lastAngle); if (diff > Math.PI) diff = Math.PI * 2 - diff;
@@ -498,7 +508,44 @@ canvas.addEventListener('mousemove', (e) => {
         }
     }
     trails.push(curr); if (trails.length > 10) trails.shift();
-});
+}
+
+// 공통 입력 종료 처리 (마우스 & 터치)
+function inputEnd() {
+    if (isDragging) {
+        if (strokeCount >= 3 && (Date.now() - strokeStartTime <= 1000)) {
+            totalComboCount++; bestCombo = Math.max(bestCombo, totalComboCount);
+            if (!isFever) feverPoints = Math.min(100, feverPoints + (strokeCount * 2));
+            playSound('combo'); setFace('HAPPY');
+            comboDiv.innerText = `${totalComboCount} COMBO!`; comboDiv.style.display = 'block';
+            setTimeout(() => { comboDiv.style.display = 'none'; }, 800);
+        } else if (strokeCount > 0) { totalComboCount = 0; }
+    }
+    isDragging = false;
+}
+
+// 마우스 이벤트
+canvas.addEventListener('mousedown', (e) => inputStart(e.clientX, e.clientY));
+canvas.addEventListener('mousemove', (e) => inputMove(e.clientX, e.clientY));
+window.addEventListener('mouseup', inputEnd);
+
+// 터치 이벤트
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    inputStart(touch.clientX, touch.clientY);
+}, {passive: false});
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    inputMove(touch.clientX, touch.clientY);
+}, {passive: false});
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    inputEnd();
+}, {passive: false});
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -530,7 +577,7 @@ function animate() {
         }
     }
     if (isDragging && trails.length > 1) {
-        ctx.beginPath(); ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 12; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = (window.innerWidth < 768) ? 6 : 12; ctx.lineCap = "round";
         ctx.moveTo(trails[0].x, trails[0].y); for (let i = 1; i < trails.length; i++) ctx.lineTo(trails[i].x, trails[i].y); ctx.stroke();
     }
     document.getElementById('score').innerText = Math.floor(score); 
