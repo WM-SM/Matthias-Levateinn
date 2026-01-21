@@ -13,13 +13,13 @@
             overflow: hidden; 
             font-family: 'Arial', sans-serif; 
             user-select: none; 
-            touch-action: none; /* 전체 스크롤 방지 */
+            touch-action: none;
         }
         canvas { 
             display: block; 
             background: rgba(26, 26, 26, 0.4); 
             cursor: crosshair;
-            touch-action: none; /* 캔버스 위 터치 동작 강제 점유 */
+            touch-action: none;
         }
         
         #overlay, #result-screen { 
@@ -245,6 +245,10 @@ const flashDiv = document.getElementById('flash-overlay');
 const comboUI = document.getElementById('current-combo-ui');
 const faceImgUI = document.getElementById('face-img');
 
+// 시간 관리용 변수 (60FPS 기준 델타 타임)
+let lastTime = 0;
+let deltaTime = 1;
+
 const sounds = {
     bgm: new Audio('001_main.mp3'),
     slash1: new Audio('002_slash.mp3'),
@@ -346,7 +350,13 @@ class Fruit {
             this.img = images[{BIG: '004_fruit_big.png', DEPEND: '007_fruit_depend.png', DEBUFF: '006_fruit_debuff.png', SPEAR: '005_fruit_spear.png'}[type]];
         }
     }
-    update() { this.vy += 0.4; this.x += this.vx; this.y += this.vy; this.rotation += this.rotSpeed; }
+    update(dt) { 
+        // deltaTime 적용
+        this.vy += 0.4 * dt; 
+        this.x += this.vx * dt; 
+        this.y += this.vy * dt; 
+        this.rotation += this.rotSpeed * dt; 
+    }
     draw() {
         if (this.img && this.img.complete) {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rotation);
@@ -367,9 +377,9 @@ class SpearProjectile {
         this.vx = Math.cos(angle) * this.speed;
         this.vy = Math.sin(angle) * this.speed;
     }
-    update() {
-        this.x += this.vx;
-        this.y += this.vy;
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
         return (this.y < canvas.height + 100);
     }
     draw() {
@@ -390,7 +400,12 @@ class SlicedEffect {
         this.x = x; this.y = y; this.img = img; this.size = size;
         this.vx = side === 'left' ? -7 : 7; this.vy = -6; this.rotation = angle; this.opacity = 1; this.side = side;
     }
-    update() { this.vy += 0.5; this.x += this.vx; this.y += this.vy; this.opacity -= 0.03; }
+    update(dt) { 
+        this.vy += 0.5 * dt; 
+        this.x += this.vx * dt; 
+        this.y += this.vy * dt; 
+        this.opacity -= 0.03 * dt; 
+    }
     draw() {
         if (this.img && this.img.complete) {
             ctx.save(); ctx.globalAlpha = Math.max(0, this.opacity); ctx.translate(this.x, this.y); ctx.rotate(this.rotation);
@@ -468,7 +483,6 @@ function showTutorial() {
     document.body.appendChild(box);
 }
 
-// 좌표 획득 함수 (캔버스 상대 좌표)
 function getCoord(e) {
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -479,7 +493,6 @@ function getCoord(e) {
     };
 }
 
-// 입력 시작
 function inputStart(e) {
     if (gameState !== 'PLAYING') return;
     isDragging = true; 
@@ -490,11 +503,8 @@ function inputStart(e) {
     trails = [{ x: pos.x, y: pos.y }];
 }
 
-// 입력 이동
 function inputMove(e) {
     if (!isDragging || gameState !== 'PLAYING') return;
-    
-    // 모바일 기본 동작 방지
     if (e.cancelable) e.preventDefault();
     
     const pos = getCoord(e);
@@ -541,7 +551,6 @@ function inputMove(e) {
     trails.push(curr); if (trails.length > 10) trails.shift();
 }
 
-// 입력 종료
 function inputEnd() {
     if (isDragging) {
         if (strokeCount >= 3 && (Date.now() - strokeStartTime <= 1000)) {
@@ -555,43 +564,46 @@ function inputEnd() {
     isDragging = false;
 }
 
-// 이벤트 리스너 (캔버스에 직접 등록하여 우선순위 확보)
 canvas.addEventListener('mousedown', inputStart);
 window.addEventListener('mousemove', inputMove, { passive: false });
 window.addEventListener('mouseup', inputEnd);
 
-canvas.addEventListener('touchstart', (e) => {
-    inputStart(e);
-}, { passive: false });
-
-canvas.addEventListener('touchmove', (e) => {
-    inputMove(e);
-}, { passive: false });
-
+canvas.addEventListener('touchstart', (e) => { inputStart(e); }, { passive: false });
+canvas.addEventListener('touchmove', (e) => { inputMove(e); }, { passive: false });
 canvas.addEventListener('touchend', inputEnd, { passive: false });
 
-function animate() {
+function animate(currentTime) {
+    // 델타 타임 계산 (60FPS 기준 16.67ms = deltaTime 1)
+    if (!lastTime) lastTime = currentTime;
+    const elapsed = currentTime - lastTime;
+    lastTime = currentTime;
+    deltaTime = elapsed / (1000 / 60);
+
+    // 델타 타임이 너무 튀는 현상 방지 (백그라운드 복귀 등)
+    if (deltaTime > 3) deltaTime = 1;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
     if (gameState === 'PLAYING') {
         if (feverPoints >= 100 && !isFever) { isFever = true; timeLeft += 5; }
-        if (isFever) { feverPoints -= 0.17; if (feverPoints <= 0) { isFever = false; feverPoints = 0; } }
+        if (isFever) { feverPoints -= 0.17 * deltaTime; if (feverPoints <= 0) { isFever = false; feverPoints = 0; } }
         document.getElementById('fever-bar').style.width = feverPoints + "%";
         comboUI.innerText = totalComboCount; 
 
         for (let i = fruits.length - 1; i >= 0; i--) { 
-            fruits[i].update(); 
+            fruits[i].update(deltaTime); 
             fruits[i].draw(); 
             if (fruits[i].y > canvas.height + 300) fruits.splice(i, 1); 
         }
         
         for (let i = slicedFruits.length - 1; i >= 0; i--) { 
-            slicedFruits[i].update(); 
+            slicedFruits[i].update(deltaTime); 
             slicedFruits[i].draw(); 
             if (slicedFruits[i].opacity <= 0) slicedFruits.splice(i, 1); 
         }
         
         for (let i = spearAttacks.length - 1; i >= 0; i--) { 
-            if (!spearAttacks[i].update()) { 
+            if (!spearAttacks[i].update(deltaTime)) { 
                 triggerLifeLoss(); 
                 spearAttacks.splice(i, 1); 
             } else {
@@ -599,6 +611,7 @@ function animate() {
             }
         }
     }
+
     if (isDragging && trails.length > 1) {
         ctx.beginPath(); 
         ctx.strokeStyle = "rgba(255,255,255,0.9)"; 
@@ -609,8 +622,10 @@ function animate() {
         for (let i = 1; i < trails.length; i++) ctx.lineTo(trails[i].x, trails[i].y); 
         ctx.stroke();
     }
+    
     document.getElementById('score').innerText = Math.floor(score); 
     document.getElementById('timer').innerText = Math.ceil(timeLeft);
+    
     requestAnimationFrame(animate);
 }
 
@@ -624,7 +639,10 @@ document.getElementById('main-btn').addEventListener('click', () => {
 });
 document.getElementById('retry-btn').addEventListener('click', () => { stopBGM(); location.reload(); });
 setInterval(() => { if (gameState === 'PLAYING') { timeLeft--; if (timeLeft <= 0) gameOver(); } }, 1000);
-window.onload = animate;
+
+// 애니메이션 루프 시작
+requestAnimationFrame(animate);
 </script>
 </body>
 </html>
+
