@@ -35,26 +35,26 @@
             align-items: center; 
             z-index: 100; 
             box-sizing: border-box; 
-            padding: 20px; 
+            padding: 10px; 
         }
         #result-screen { display: none; }
         
         #game-title, .result-title { 
-            font-size: 8vw; 
-            max-size: 60px;
+            font-size: 10vw; /* 모바일에서 글씨 크기 약간 조정 */
+            max-font-size: 50px;
             font-weight: bold; 
             color: #bc00ff; 
             text-shadow: 0 0 20px rgba(188, 0, 255, 0.6); 
-            margin-bottom: 20px; 
+            margin-bottom: 15px; 
             text-align: center;
         }
         
         #grid-container { 
             display: grid; 
-            grid-template-columns: 1fr 1fr; 
+            grid-template-columns: 1fr 1.2fr; /* 이미지가 조금 더 넓게 배치되도록 조정 */
             grid-template-rows: auto auto;    
-            gap: 20px; 
-            width: 95%; 
+            gap: 10px; 
+            width: 100%; 
             max-width: 1400px;
             align-items: center;
         }
@@ -62,12 +62,13 @@
         #description { 
             grid-column: 1; 
             grid-row: 1;
-            font-size: 18px; 
-            line-height: 1.6; 
+            font-size: 15px; /* 모바일 글씨 크기 축소 */
+            line-height: 1.4; 
             text-align: left; 
             color: #fff; 
             text-shadow: 2px 2px 4px #000;
             word-break: keep-all;
+            padding-left: 10px;
         }
         
         #char-img-container { 
@@ -77,22 +78,26 @@
             justify-content: center;
             align-items: center;
         }
-        #char-img { max-width: 100%; max-height: 40vh; object-fit: contain; }
+        #char-img { 
+            max-width: 110%; /* 가로폭 살짝 확장 */
+            max-height: 50vh; /* 주인공 이미지 크기 확대 */
+            object-fit: contain; 
+        }
         
         .btn-wrapper-left { grid-column: 1; grid-row: 2; display: flex; justify-content: center; }
         .btn-wrapper-right { grid-column: 2; grid-row: 2; display: flex; justify-content: center; }
 
-        .btn { padding: 15px 30px; font-size: 24px; font-weight: bold; color: white; background: #e67e22; border: none; border-radius: 12px; cursor: pointer; pointer-events: auto; display: flex; align-items: center; justify-content: center; transition: background 0.2s; min-width: 150px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .btn { padding: 12px 20px; font-size: 18px; font-weight: bold; color: white; background: #e67e22; border: none; border-radius: 12px; cursor: pointer; pointer-events: auto; display: flex; align-items: center; justify-content: center; transition: background 0.2s; min-width: 120px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .btn:hover { background: #d35400; }
 
         #copyright-notice {
             position: absolute;
-            bottom: 10px;
-            width: 90%;
+            bottom: 5px;
+            width: 95%;
             text-align: center;
-            font-size: 10px;
+            font-size: 9px;
             color: rgba(255, 255, 255, 0.6);
-            line-height: 1.3;
+            line-height: 1.2;
             pointer-events: none;
         }
 
@@ -139,8 +144,9 @@
 
         @media (min-width: 768px) {
             #game-title, .result-title { font-size: 60px; }
-            #description { font-size: 28px; }
-            #char-img { max-height: 600px; }
+            #description { font-size: 28px; line-height: 1.6; padding-left: 0; }
+            #char-img { max-height: 600px; max-width: 100%; }
+            #grid-container { gap: 20px; grid-template-columns: 1fr 1fr; }
             .btn { padding: 20px 60px; font-size: 32px; min-width: 250px; }
             #ui-face-box { width: 234px; height: 234px; }
             .volume-controls { width: 234px; padding: 10px; }
@@ -245,7 +251,6 @@ const flashDiv = document.getElementById('flash-overlay');
 const comboUI = document.getElementById('current-combo-ui');
 const faceImgUI = document.getElementById('face-img');
 
-// 시간 관리용 변수
 let lastTime = performance.now();
 let deltaTime = 1;
 
@@ -500,7 +505,6 @@ function getCoord(e) {
 
 function inputStart(e) {
     if (gameState !== 'PLAYING') return;
-    // 터치와 마우스 중복 이벤트 방지
     if (e.cancelable) e.preventDefault();
     e.stopPropagation();
 
@@ -575,7 +579,6 @@ function inputEnd(e) {
     isDragging = false;
 }
 
-// 이벤트 리스너: 모바일 중복 방지 및 캡쳐 강화
 canvas.addEventListener('mousedown', inputStart);
 window.addEventListener('mousemove', inputMove, { passive: false });
 window.addEventListener('mouseup', inputEnd);
@@ -585,12 +588,8 @@ canvas.addEventListener('touchmove', inputMove, { passive: false });
 canvas.addEventListener('touchend', inputEnd, { passive: false });
 
 function animate(currentTime) {
-    // 델타 타임 계산 (60FPS 기준 16.67ms = deltaTime 1)
     const elapsed = currentTime - lastTime;
     lastTime = currentTime;
-    
-    // 비정상적인 프레임 건너뜀 방지 (터치 가속의 주요 원인 해결)
-    // 16.67ms에 가까울수록 1에 수렴하게 보정
     deltaTime = Math.min(elapsed / (1000 / 60), 2.5);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -649,14 +648,13 @@ document.getElementById('main-btn').addEventListener('click', () => {
     fruits = []; slicedFruits = []; spearAttacks = []; updateHearts();
     document.getElementById('overlay').style.display = 'none'; 
     document.getElementById('game-ui').style.display = 'block'; 
-    lastTime = performance.now(); // 시작 시간 초기화
+    lastTime = performance.now();
     spawnCycle();
 });
 
 document.getElementById('retry-btn').addEventListener('click', () => { stopBGM(); location.reload(); });
 setInterval(() => { if (gameState === 'PLAYING') { timeLeft--; if (timeLeft <= 0) gameOver(); } }, 1000);
 
-// 애니메이션 루프 시작
 requestAnimationFrame(animate);
 </script>
 </body>
