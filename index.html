@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>마티아스: 레바테인</title>
     <style>
+        
         body { 
             margin: 0; 
             background: #000 url('008_back.png') no-repeat center center fixed; 
@@ -60,32 +61,34 @@
         }
         
         #description { 
-            grid-column: 1; 
-            grid-row: 1;
+            grid-column: span 2;
+            grid-row: 2;
             font-size: 15px; /* 모바일 글씨 크기 축소 */
             line-height: 1.4; 
-            text-align: left; 
+            text-align: center; 
             color: #fff; 
             text-shadow: 2px 2px 4px #000;
             word-break: keep-all;
             padding-left: 10px;
+            width: 100%;
         }
         
         #char-img-container { 
-            grid-column: 2; 
+            grid-column: span 2;
             grid-row: 1;
             display: flex;
             justify-content: center;
             align-items: center;
+            width: 100%;
         }
         #char-img { 
-            max-width: 110%; /* 가로폭 살짝 확장 */
+            max-width: 100%; /* 가로폭 살짝 확장 */
             max-height: 50vh; /* 주인공 이미지 크기 확대 */
             object-fit: contain; 
         }
         
-        .btn-wrapper-left { grid-column: 1; grid-row: 2; display: flex; justify-content: center; }
-        .btn-wrapper-right { grid-column: 2; grid-row: 2; display: flex; justify-content: center; }
+        .btn-wrapper-left { grid-column: 1; grid-row: 3; display: flex; justify-content: center; }
+        .btn-wrapper-right { grid-column: 2; grid-row: 3; display: flex; justify-content: center; }
 
         .btn { padding: 12px 20px; font-size: 18px; font-weight: bold; color: white; background: #e67e22; border: none; border-radius: 12px; cursor: pointer; pointer-events: auto; display: flex; align-items: center; justify-content: center; transition: background 0.2s; min-width: 120px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .btn:hover { background: #d35400; }
@@ -144,10 +147,13 @@
 
         @media (min-width: 768px) {
             #game-title, .result-title { font-size: 60px; }
-            #description { font-size: 28px; line-height: 1.6; padding-left: 0; }
+            #description { font-size: 28px; line-height: 1.6; padding-left: 0; grid-column: 1; grid-row: 1; text-align: left;}
             #char-img { max-height: 600px; max-width: 100%; }
+            #char-img-container { grid-column: 2; grid-row: 1; }
             #grid-container { gap: 20px; grid-template-columns: 1fr 1fr; }
             .btn { padding: 20px 60px; font-size: 32px; min-width: 250px; }
+            .btn-wrapper-left { grid-column: 1; grid-row: 2; }
+            .btn-wrapper-right { grid-column: 2; grid-row: 2; }
             #ui-face-box { width: 234px; height: 234px; }
             .volume-controls { width: 234px; padding: 10px; }
             .volume-label { font-size: 14px; }
@@ -659,4 +665,5 @@ requestAnimationFrame(animate);
 </script>
 </body>
 </html>
+
 
